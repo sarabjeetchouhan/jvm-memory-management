@@ -1,0 +1,233 @@
+{
+  "main": {
+    "id": "023c1e16b9367a30",
+    "type": "split",
+    "children": [
+      {
+        "id": "9cad92da76b2f029",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "ec57f8983017fff6",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "java-memory-mangement.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "java-memory-mangement"
+            }
+          },
+          {
+            "id": "a1c49bdc053fd77a",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "teswt.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "teswt"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "428b7aa18fae3d9f",
+    "type": "split",
+    "children": [
+      {
+        "id": "cee319dfd0a78234",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "671e611070a85072",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "cf38972e9f91a694",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "tag:#hi",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "0df9bc3d6d828ce7",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "97044193a018c357",
+    "type": "split",
+    "children": [
+      {
+        "id": "bc681d97d2c6b73f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "02a8d40719c0075d",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "teswt.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "5dde86636e129b02",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "teswt.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "e051362828ac709e",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "f655483f205da4c6",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "f9ef78afd22f9e3f",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "teswt.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ],
+        "currentTab": 3
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "a1c49bdc053fd77a",
+  "lastOpenFiles": [
+    "java-memory-mangement.md",
+    "teswt.md",
+    "JVM.md",
+    "src/main/resources/java-memory-mangement.drawio.png",
+    "src/java-memory-mangement.drawio.png",
+    "src/main/resources/java-memory-mangement.md",
+    "java-memory-mangement.drawio.md",
+    "src/main/resources/java-memory-mangement.drawio.md",
+    "src/main/resources/java-memory-mangement.drawio.svg",
+    "java-memory-mangement.drawio",
+    "src/main/resources/java-memory-mangement.drawio.svg.png",
+    "java-memory-mangement.png",
+    "JVM",
+    "Java memory management.md",
+    "src/main/resources/java-memory-mangement.drawio.xml",
+    "src/main/resources/java-memory-mangement.drawio",
+    "java-memory-mangement.drawio.xml",
+    "src/main/resources/java-memory-mangement.png",
+    "2026-09-20.md",
+    "Untitled.canvas",
+    "Untitled.base",
+    "Untitled 1.canvas"
+  ]
+}
