@@ -1,5 +1,3 @@
-package main.java;
-
 public class MemoryManagementInJava {
 
     static int num1=0;
