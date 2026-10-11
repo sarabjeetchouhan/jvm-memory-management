@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>JVM Memory Management</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f5f7fb; color: #1e293b; font: 20px/1.75 system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 32px auto; padding: 40px; background: white; border-radius: 16px; }
+  h1 { font-size: 2.1em; line-height: 1.2; }
+  h2 { font-size: 1.6em; line-height: 1.3; margin-top: 2em; }
+  h3 { font-size: 1.25em; }
+  a { color: #1d4ed8; text-underline-offset: 3px; }
+  a:focus-visible, summary:focus-visible { outline: 3px solid #2563eb; outline-offset: 4px; }
+  img { display: block; max-width: 100%; height: auto; margin: 24px auto; }
+  pre { overflow-x: auto; padding: 20px; border-radius: 10px; background: #f1f5f9; line-height: 1.6; }
+  code { font-size: 0.9em; }
+  pre code { font-size: 17px; }
+  table { display: block; overflow-x: auto; border-collapse: collapse; margin: 24px 0; font-size: 18px; }
+  th, td { border: 1px solid #cbd5e1; padding: 12px 16px; text-align: left; }
+  th { background: #eff6ff; }
+  summary { cursor: pointer; font-weight: 600; }
+  @media (max-width: 600px) { main { margin: 0; padding: 24px 16px; border-radius: 0; } }
+</style>
+</head>
+<body><main><h1 id="jvm-memory-management">JVM Memory Management</h1>
+<p>Learn how Java stores method frames, objects, strings, and class metadata, and
+how garbage collection reclaims memory. This guide includes PNG diagrams, Java
+examples, and commands for investigating memory problems.</p>
+<p><a href="readme.md">View the repository README</a>.</p>
+<h2 id="contents">Contents</h2>
+<ol>
+<li><a href="#memory-overview">Memory overview</a></li>
+<li><a href="#stack-memory">Stack memory</a></li>
+<li><a href="#heap-memory-and-references">Heap memory and references</a></li>
+<li><a href="#strings-and-the-string-pool">Strings and the string pool</a></li>
+<li><a href="#metaspace">Metaspace</a></li>
+<li><a href="#garbage-collection">Garbage collection</a></li>
+<li><a href="#garbage-collectors">Garbage collectors</a></li>
+<li><a href="#diagnosing-memory-problems">Diagnosing memory problems</a></li>
+<li><a href="#diagram-resources">Diagram resources</a></li>
+</ol>
+<h2 id="memory-overview">Memory overview</h2>
+<p><img src="src/main/resources/images/memory-overview.png" alt="JVM memory layout comparison"></p>
+<p>The following areas form the core memory model used in this guide:</p>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Purpose</th>
+<th>Scope</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>JVM stack</td>
+<td>Frames for active method calls, including local variables and operand stacks</td>
+<td>One per thread</td>
+</tr>
+<tr>
+<td>Heap</td>
+<td>Objects and arrays</td>
+<td>Shared by threads</td>
+</tr>
+<tr>
+<td>Metaspace</td>
+<td>Class metadata in HotSpot</td>
+<td>Native memory managed by the JVM</td>
+</tr>
+</tbody></table>
+<p>The JVM also has program counters and native method stacks. Its specification
+leaves physical layout and optimizations to implementations. See the
+<a href="https://docs.oracle.com/javase/specs/jvms/se17/html/jvms-2.html#jvms-2.5">JVM runtime data areas specification</a>.</p>
+<p><strong>Version history:</strong> interned strings moved from PermGen into the main heap in
+<strong>JDK 7</strong>. PermGen was removed in <strong>JDK 8</strong>, with class metadata moving to native
+memory. The diagram groups Java 7 with earlier releases; use these version
+boundaries when reading it. Sources: <a href="https://docs.oracle.com/javase/7/docs/technotes/guides/vm/enhancements-7.html">JDK 7 VM changes</a>
+and <a href="https://docs.oracle.com/en/java/javase/25/gctuning/other-considerations.html">HotSpot class metadata</a>.</p>
+<h2 id="stack-memory">Stack memory</h2>
+<p>A method invocation creates a frame; returning discards it. Frames contain
+local variables, an operand stack, and information used for linking and return.
+Calls unwind in <strong>LIFO</strong> order: the most recent call returns first.</p>
+<p><img src="src/main/resources/images/stack-heap-metaspace.png" alt="Method frames and references to heap objects"></p>
+<p>In the example, <code>main()</code> holds primitive local values and
+references such as <code>var3</code>, <code>var4</code>, and <code>d1</code>. Calling <code>d1.getName()</code> creates
+another frame. Its return removes that frame while <code>main()</code> continues. A
+reference can also be stored in an object&#39;s field or an array, so references
+are not confined to stacks. Instance primitive fields belong to their objects.</p>
+<p><img src="src/main/resources/images/stack-execution.png" alt="Frames pushed on invocation and popped on return"></p>
+<p>Excessive call depth can cause <code>StackOverflowError</code>. Releasing a frame does not
+immediately free every object it referenced: an object may remain reachable
+elsewhere. See <a href="https://docs.oracle.com/javase/specs/jvms/se17/html/jvms-2.html#jvms-2.6">JVM frames</a>.</p>
+<h3 id="one-stack-per-thread">One stack per thread</h3>
+<p><img src="src/main/resources/images/per-thread-stacks.png" alt="Separate thread stacks referring to a shared heap"></p>
+<p>Each thread has its own stack, while objects in the heap can be shared.
+Concurrent changes to shared objects require an appropriate synchronization
+strategy.</p>
+<h2 id="heap-memory-and-references">Heap memory and references</h2>
+<p><img src="src/main/resources/images/heap-objects.png" alt="Heap objects, pooled strings, and class-level state"></p>
+<p>The arrows show reachability: <code>d1</code> refers to a <code>Demo</code> object, which has a <code>name</code>
+field referring to a string. Separate variables can refer to the same object.</p>
+<p>The “Static Pool” box is a conceptual grouping of class-level state, rather than
+a standard named heap generation. Likewise, the runtime constant pool is
+per-class linking information and should not be confused with the string pool.</p>
+<p>The following example illustrates local values, object references, and a
+nested method call:</p>
+<pre><code class="language-java">public class MemoryManagementInJava {
+    static int num1 = 10;
+
+    public static void main(String[] args) {
+        int var1 = 2;
+        boolean var2 = true;
+        String var3 = &quot;JVM-1&quot;;
+        String var4 = new String(&quot;JVM-2&quot;);
+        Demo d1 = new Demo();
+        String name = d1.getName();
+    }
+}
+
+class Demo {
+    String name = &quot;test&quot;;
+
+    String getName() {
+        return name;
+    }
+}
+</code></pre>
+<p>This is a conceptual memory model, not a promise that optimized machine code
+allocates every value exactly as drawn.</p>
+<h2 id="strings-and-the-string-pool">Strings and the string pool</h2>
+<p><img src="src/main/resources/images/string-pool.png" alt="String literals share an interned object while new String creates separate objects"></p>
+<p>String literals are interned. <code>new String(&quot;test&quot;)</code> creates a distinct string
+object; <code>==</code> compares object identity and <code>equals()</code> compares string content.
+<code>intern()</code> returns the canonical pooled representation. See the
+<a href="https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/lang/String.html#intern()">String API</a>.</p>
+<pre><code class="language-java">String var1 = &quot;test&quot;;
+String var2 = &quot;test&quot;;
+String var3 = new String(&quot;test&quot;);
+String var4 = new String(&quot;test&quot;);
+
+System.out.println(var1 == var2);        // true
+System.out.println(var3 == var4);        // false
+System.out.println(var1 == var3);        // false
+System.out.println(var1.equals(var3));   // true
+System.out.println(var1 == var3.intern()); // true
+</code></pre>
+<p>In the diagram, the second heap object labeled <code>var3</code> represents the object
+referenced by <code>var4</code>. Addresses are illustrative; <code>==</code> tests reference identity.</p>
+<h2 id="metaspace">Metaspace</h2>
+<p>HotSpot stores class metadata in Metaspace, using native memory outside the
+Java object heap. The combined memory diagram shows how heap objects relate
+to their class structures.</p>
+<p>Class metadata can be reclaimed when classes are unloaded. Retained class
+loaders and repeated dynamic class generation can lead to Metaspace growth.
+An <code>OutOfMemoryError: Metaspace</code> can also result from a restrictive limit; the
+message alone does not establish a class-loader leak. See
+<a href="https://docs.oracle.com/en/java/javase/25/gctuning/other-considerations.html">HotSpot metadata allocation and reclamation</a>.</p>
+<h2 id="garbage-collection">Garbage collection</h2>
+<p>Garbage collection reclaims objects that are no longer reachable through the
+references relevant to the collector. An object can be unreachable even if
+other unreachable objects still refer to it; cyclic references alone do not
+prevent collection.</p>
+<p>Marking generally identifies <strong>live</strong> objects. Sweeping reclaims unused
+storage; copying or compaction can move surviving objects. These are different
+operations, and collectors combine them in different ways.</p>
+<h3 id="young-and-old-generations">Young and old generations</h3>
+<p><img src="src/main/resources/images/heap-generations.png" alt="Traditional generational heap with Eden and two survivor spaces"></p>
+<p>This image represents a traditional generational collector layout. Newly
+allocated objects commonly enter Eden. Surviving young collections increases
+an object&#39;s age; older survivors may be promoted into the old generation.
+Age counts collections survived, <strong>not elapsed minutes</strong>. The exact layout and
+promotion decisions depend on the collector. See
+<a href="https://docs.oracle.com/javase/8/docs/technotes/guides/vm/gctuning/generations.html">Oracle&#39;s generational collection guide</a>.</p>
+<h3 id="following-the-example-objects">Following the example objects</h3>
+<p><img src="src/main/resources/images/gc-object-lifecycle.png" alt="Object reclamation, survival, and promotion"></p>
+<ol>
+<li><code>OB1</code> through <code>OB4</code> are initially drawn in Eden.</li>
+<li><code>OB2</code> and <code>OB4</code> become unreachable and can be reclaimed.</li>
+<li>Live objects survive collection and move into survivor storage.</li>
+<li>New objects enter Eden; later collections reclaim dead objects and retain survivors.</li>
+<li>Some survivors eventually move into old-generation storage, where they remain subject to collection.</li>
+</ol>
+<p><strong>Diagram note:</strong> read the age labels as survived collection counts, not
+minutes. In a copying young collector, S0 and S1 normally alternate roles
+between collections rather than forming successive timed stages. Promotion
+may occur sooner if survivor space is insufficient. The diagram illustrates
+survival and promotion rather than an exact collector trace.</p>
+<h2 id="garbage-collectors">Garbage collectors</h2>
+<table>
+<thead>
+<tr>
+<th>Collector or category</th>
+<th>Main idea</th>
+<th>Clarification</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Serial GC</td>
+<td>Uses a single GC worker for collection</td>
+<td>Collection pauses application execution</td>
+</tr>
+<tr>
+<td>Parallel GC</td>
+<td>Uses multiple GC workers</td>
+<td>Parallel collection still includes application pauses</td>
+</tr>
+<tr>
+<td>Concurrent collectors</td>
+<td>Perform some GC work alongside application threads</td>
+<td>Concurrent work does not imply zero pauses</td>
+</tr>
+<tr>
+<td>G1 GC</td>
+<td>Collects heap regions and performs much marking concurrently</td>
+<td>Includes stop-the-world evacuation pauses; its pause target is a goal</td>
+</tr>
+</tbody></table>
+<p>Concurrency describes how collection work overlaps with application execution;
+it does not guarantee zero pauses. G1 uses regions rather than one fixed
+contiguous Eden/S0/S1 arrangement. See
+<a href="https://docs.oracle.com/en/java/javase/17/gctuning/garbage-first-g1-garbage-collector1.html">Oracle&#39;s G1 guide</a>.</p>
+<h2 id="diagnosing-memory-problems">Diagnosing memory problems</h2>
+<p>CPU spikes, rising post-GC heap usage, long response times, and out-of-memory
+errors can indicate memory pressure. Correlate these symptoms with allocation
+rates, GC pauses, and retained objects before deciding on a fix.</p>
+<h3 id="capture-logs-and-dumps">Capture logs and dumps</h3>
+<p>For JDK 9 and later, a startup command can enable unified GC logging and an
+automatic heap dump on an out-of-memory error. Create a writable output
+directory first:</p>
+<pre><code class="language-bash">mkdir -p logs
+java \
+  -Xlog:gc*,gc+phases=debug:file=logs/gc.log:time,uptime,pid:filecount=5,filesize=100M \
+  -XX:+HeapDumpOnOutOfMemoryError \
+  -XX:HeapDumpPath=logs \
+  -jar app.jar
+</code></pre>
+<p>Heap dumps may be large. Options and their behavior are documented in the
+<a href="https://docs.oracle.com/en/java/javase/17/docs/specs/man/java.html">JDK 17 java command reference</a>.</p>
+<p>For a running process, replace <code>12345</code> with its PID:</p>
+<pre><code class="language-bash">jstat -gcutil 12345 1000
+jcmd 12345 GC.class_histogram
+jcmd 12345 GC.heap_dump logs/heapdump.hprof
+</code></pre>
+<p>Histograms and heap dumps can have significant impact on the running process;
+use them deliberately. See <a href="https://docs.oracle.com/en/java/javase/17/docs/specs/man/jcmd.html">jcmd diagnostics and impact levels</a>.</p>
+<h3 id="interpret-the-evidence">Interpret the evidence</h3>
+<table>
+<thead>
+<tr>
+<th>Observation</th>
+<th>What to investigate</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Rising heap baseline after comparable collections</td>
+<td>Long-lived retained objects, unbounded caches, growing collections</td>
+</tr>
+<tr>
+<td>Frequent young collections</td>
+<td>High allocation rate and short-lived temporary objects</td>
+</tr>
+<tr>
+<td>Long pauses or frequent full collections</td>
+<td>Heap pressure, promotion, allocation size, and collector behavior</td>
+</tr>
+<tr>
+<td>Metaspace growth</td>
+<td>Class count, generated classes, class-loader retention, and limits</td>
+</tr>
+<tr>
+<td>Java heap space error</td>
+<td>Live data size relative to available heap; retention paths</td>
+</tr>
+</tbody></table>
+<p>In a heap analyzer, inspect the <strong>dominator tree</strong>, <strong>retained heap</strong>, and
+<strong>paths to GC roots</strong>. Shallow size measures an individual object; retained
+size includes objects kept alive through it. Check cache eviction, retained
+collections, background threads, and class-loader lifecycle. Increasing a memory limit may delay failure without fixing retention.</p>
+<h2 id="diagram-resources">Diagram resources</h2>
+<ul>
+<li><a href="src/main/resources/java-memory-mangement.drawio">Editable draw.io diagram</a></li>
+<li><a href="java-memory-mangement.drawio.png">Complete diagram PNG</a></li>
+<li><a href="src/main/resources/images/">Individual PNG diagrams</a></li>
+</ul>
+<p>The images use a simplified HotSpot memory model. Version-specific labels and
+collector behavior are clarified in the relevant sections above.</p>
+</main></body>
+</html>
